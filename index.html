@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Help the Little Walker — Interactive</title>
+  <style>
+    :root{--bg:#f3f7fb;--accent:#4f46e5;--muted:#64748b}
+    html,body{height:100%;margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,'Helvetica Neue',Arial}
+    body{background:linear-gradient(180deg,#e6f0ff 0%,var(--bg) 60%);display:flex;align-items:center;justify-content:center;padding:24px}
+
+    .stage{width:920px;max-width:96%;background:white;border-radius:16px;box-shadow:0 10px 30px rgba(20,20,60,0.08);overflow:hidden}
+    header{display:flex;align-items:center;gap:12px;padding:18px 22px;border-bottom:1px solid #eef2f7}
+    header h1{font-size:18px;margin:0}
+    header p{margin:0;color:var(--muted);font-size:13px}
+
+    .scene{position:relative;height:420px;padding:20px}
+    .ground{position:absolute;left:0;right:0;bottom:48px;height:120px;background:linear-gradient(180deg,#eaf2ff,#f8fafc);box-shadow:inset 0 1px 0 rgba(255,255,255,0.6)}
+    .path{position:absolute;left:0;right:0;bottom:140px;height:8px;background:repeating-linear-gradient(90deg,#e0e7ff 0 32px,transparent 32px 64px);opacity:.6}
+
+    .character-wrap{position:absolute;left:40px;bottom:170px;width:120px;height:160px;pointer-events:none}
+    .char{width:100%;height:100%;transform-origin:center bottom}
+    .walking{animation:walk 3.6s linear forwards}
+    @keyframes walk{0%{transform:translateX(0)}75%{transform:translateX(560px)}100%{transform:translateX(560px)}}
+
+    .slip {animation: slipAnim 1s forwards}
+    @keyframes slipAnim{0%{transform:translateX(560px) rotate(0)}30%{transform:translateX(570px) rotate(8deg)}60%{transform:translateX(580px) rotate(40deg) translateY(30px)}100%{transform:translateX(580px) rotate(90deg) translateY(56px)}}
+
+    .fallen{transform-origin:left top;transform:translateX(580px) translateY(56px) rotate(90deg)}
+    .scratch{position:absolute;left:78px;top:46px;width:22px;height:10px;background:linear-gradient(90deg,#ff5b5b,#ff2d2d);border-radius:6px;transform:rotate(-20deg);opacity:0}
+    .has-scratch .scratch{opacity:1;animation:blink 1s steps(2) infinite}
+    @keyframes blink{50%{opacity:.3}}
+
+    .controls{position:absolute;right:20px;top:24px;display:flex;flex-direction:column;gap:10px}
+    .btn{background:var(--accent);color:white;padding:10px 14px;border-radius:10px;border:0;font-weight:600;cursor:pointer}
+    .btn[disabled]{opacity:.45;cursor:not-allowed}
+
+    .treatment{position:absolute;left:50%;transform:translateX(-50%);bottom:34px;width:420px;display:flex;align-items:center;gap:12px;padding:12px;border-radius:12px;background:rgba(255,255,255,0.9);box-shadow:0 4px 18px rgba(40,40,60,0.06)}
+    .progress{flex:1;height:10px;background:#eef2f7;border-radius:20px;overflow:hidden}
+    .bar{height:100%;width:0%;background:linear-gradient(90deg,#34d399,#60a5fa);transition:width 350ms linear}
+
+    .chinup-bar{position:absolute;left:560px;bottom:180px;width:140px;height:12px;background:#94a3b8;border-radius:8px;display:flex;align-items:center;justify-content:center}
+    .bar-pole{position:absolute;left:618px;bottom:180px;width:6px;height:120px;background:#94a3b8;border-radius:6px}
+
+    .chinup{animation:chin 1s ease-in-out 4}
+    @keyframes chin{0%{transform:translateY(0)}50%{transform:translateY(-36px)}100%{transform:translateY(0)}}
+
+    .dance{animation:dance 1.2s ease-in-out infinite}
+    @keyframes dance{0%{transform:translateY(0) rotate(0)}25%{transform:translateY(-8px) rotate(-4deg)}50%{transform:translateY(0) rotate(0)}75%{transform:translateY(-6px) rotate(4deg)}100%{transform:translateY(0) rotate(0)}}
+
+    .bubble{position:absolute;left:620px;bottom:320px;background:white;padding:10px 12px;border-radius:12px;border:1px solid #eef2f7;box-shadow:0 6px 20px rgba(25,30,50,0.06);min-width:180px}
+    .bubble strong{display:block;color:var(--accent);margin-bottom:6px}
+    .positive{font-weight:700;color:#047857;margin-top:8px}
+
+    .fallen-label{position:absolute;left:580px;bottom:110px;font-size:14px;font-weight:600;color:#ef4444;background:rgba(255,255,255,0.9);padding:4px 8px;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,0.1);display:none}
+
+    footer{padding:14px 22px;border-top:1px solid #eef2f7;display:flex;align-items:center;justify-content:space-between}
+    small{color:var(--muted)}
+  </style>
+</head>
+<body>
+  <div class="stage" role="application" aria-label="Help the little walker interactive">
+    <header>
+      <div style="width:44px;height:44px;border-radius:10px;background:linear-gradient(90deg,#c7d2fe,#eef2ff);display:flex;align-items:center;justify-content:center;font-weight:700;color:#1e293b">!</div>
+      <div>
+        <h1>Help the little walker</h1>
+        <p>The little character will slip automatically — you just need to treat the scratch and see what happens.</p>
+      </div>
+    </header>
+
+    <div class="scene">
+      <div class="path" aria-hidden="true"></div>
+      <div class="ground" aria-hidden="true"></div>
+      <div class="chinup-bar" aria-hidden="true"></div>
+      <div class="bar-pole" aria-hidden="true"></div>
+
+      <div class="bubble" id="bubble" style="display:none;" role="status">
+        <strong id="bubble-title">Thank you!</strong>
+        <div id="bubble-text">That really helped.</div>
+        <div class="positive" id="positive-msg" style="display:none">Just a bad day and not a bad life.</div>
+      </div>
+
+      <div class="character-wrap" id="charWrap">
+        <div id="character" class="char walking" aria-hidden="false">
+          <svg viewBox="0 0 120 160" width="120" height="160" xmlns="http://www.w3.org/2000/svg">
+            <g id="body">
+              <ellipse cx="60" cy="106" rx="30" ry="22" fill="#fef3c7" />
+              <rect x="48" y="66" width="24" height="48" rx="12" fill="#60a5fa" />
+              <circle cx="60" cy="40" r="22" fill="#fff7ed" stroke="#fde68a" stroke-width="2" />
+              <circle cx="54" cy="36" r="3" fill="#0f172a" />
+              <circle cx="66" cy="36" r="3" fill="#0f172a" />
+              <path id="smile" d="M50 46 q10 8 20 0" stroke="#0f172a" stroke-width="2" fill="none" stroke-linecap="round"/>
+              <rect id="leg1" x="48" y="124" width="8" height="28" rx="4" fill="#0f172a"/>
+              <rect id="leg2" x="64" y="124" width="8" height="28" rx="4" fill="#0f172a"/>
+              <rect id="arm1" x="34" y="72" width="10" height="36" rx="5" fill="#fff7ed"/>
+              <rect id="arm2" x="76" y="72" width="10" height="36" rx="5" fill="#fff7ed"/>
+            </g>
+            <g id="bandaid" style="opacity:0;transform-origin:78px 50px">
+              <rect x="72" y="46" width="28" height="12" rx="6" fill="#fff7ed" stroke="#fbbf24" stroke-width="1.5"/>
+              <circle cx="80" cy="52" r="2" fill="#f59e0b"/>
+            </g>
+          </svg>
+        </div>
+        <div class="scratch" id="scratch" aria-hidden="true"></div>
+      </div>
+
+      <div id="fallenLabel" class="fallen-label">This youu lol &gt;.&lt;</div>
+
+      <div class="controls" role="toolbar" aria-label="Controls">
+        <button class="btn" id="treatBtn" disabled>Treat the scratch</button>
+      </div>
+
+      <div class="treatment" id="treatment" style="display:none;">
+        <div style="font-weight:700">Treating:</div>
+        <div class="progress" aria-hidden="true">
+          <div class="bar" id="bar"></div>
+        </div>
+        <div style="min-width:78px;text-align:right;font-size:13px;color:var(--muted)" id="treatText">0%</div>
+      </div>
+    </div>
+
+    <footer>
+      <small>Made with ❤️ — The slip happens automatically, you only treat.</small>
+    </footer>
+  </div>
+
+  <script>
+    const treatBtn = document.getElementById('treatBtn');
+    const character = document.getElementById('character');
+    const charWrap = document.getElementById('charWrap');
+    const treatment = document.getElementById('treatment');
+    const bar = document.getElementById('bar');
+    const treatText = document.getElementById('treatText');
+    const bubble = document.getElementById('bubble');
+    const bubbleText = document.getElementById('bubble-text');
+    const positive = document.getElementById('positive-msg');
+    const fallenLabel = document.getElementById('fallenLabel');
+
+    let treated = false;
+
+    window.addEventListener('load', ()=>{
+      character.classList.add('walking');
+      setTimeout(()=>{
+        character.classList.remove('walking');
+        character.classList.add('slip');
+        setTimeout(()=>{
+          character.classList.remove('slip');
+          character.classList.add('fallen');
+          charWrap.classList.add('has-scratch');
+          fallenLabel.style.display = 'block';
+          treatBtn.disabled = false;
+        },1000);
+      }, 3600);
+    });
+
+    treatBtn.addEventListener('click', ()=>{
+      if(treated) return;
+      treated = true;
+      treatment.style.display = 'flex';
+      treatBtn.disabled = true;
+      let p = 0;
+      const id = setInterval(()=>{
+        p += Math.random()*12 + 6;
+        if(p>100) p=100;
+        bar.style.width = p+'%';
+        treatText.textContent = Math.round(p)+'%';
+        if(p>=100){
+          clearInterval(id);
+          setTimeout(()=>finishTreatment(),250);
+        }
+      }, 300);
+    });
+
+    function finishTreatment(){
+      treatment.style.display = 'none';
+      charWrap.classList.remove('has-scratch');
+      fallenLabel.style.display = 'none';
+      const svgBand = document.getElementById('bandaid');
+      svgBand.style.transition = 'opacity 300ms, transform 300ms';
+      svgBand.style.opacity = 1;
+      svgBand.style.transform = 'translateY(-6px)';
+      setTimeout(()=>{
+        svgBand.style.opacity = 0;
+        svgBand.style.transform = 'translateY(-12px)';
+      }, 1400);
+      doChinUpsThenDance();
+    }
+
+    async function doChinUpsThenDance(){
+      character.classList.remove('fallen');
+      character.style.transform = 'translateX(560px)';
+      await sleep(600);
+      character.classList.add('chinup');
+      await sleep(1200*4 + 200);
+      character.classList.remove('chinup');
+      character.classList.add('dance');
+      bubble.style.display = 'block';
+      bubbleText.textContent = 'Thank you! I feel better.';
+      await sleep(1200);
+      positive.style.display = 'block';
+    }
+
+    function sleep(ms){return new Promise(resolve=>setTimeout(resolve,ms));}
+  </script>
+</body>
+</html>
